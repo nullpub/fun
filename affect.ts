@@ -14,21 +14,21 @@ import { isNone } from "./option.ts";
 import { flow, identity, pipe, resolve, then } from "./fns.ts";
 import { createSequenceStruct, createSequenceTuple } from "./sequence.ts";
 
-/*******************************************************************************
+/** ****************************************************************************
  * Types
- ******************************************************************************/
+ * ************************************************************************** */
 
 /**
  * The Affect type can best be thought of as an asynchronous function that
- * returns an `Either`. ie. `async (r: R) => Promise<Either<E, A>>`. This
+ * returns an `Either`. ie. `async (c: C) => Promise<Either<B, A>>`. This
  * forms the basis of most Promise based asynchronous communication in
  * TypeScript.
  */
-export type Affect<R, E, A> = Reader<R, Promise<Either<E, A>>>;
+export type Affect<C, B, A> = Reader<C, Promise<Either<B, A>>>;
 
-/*******************************************************************************
+/** ****************************************************************************
  * Kind Registration
- ******************************************************************************/
+ * ************************************************************************** */
 
 /**
  * URI constant for Affect
@@ -41,7 +41,7 @@ export const URI = "Affect";
 export type URI = typeof URI;
 
 /**
- * Kind declaration for Affect
+ * Kind declaration for Affect<C,
  */
 declare module "./hkt.ts" {
   // deno-lint-ignore no-explicit-any
@@ -50,9 +50,9 @@ declare module "./hkt.ts" {
   }
 }
 
-/*******************************************************************************
+/** ****************************************************************************
  * Constructors
- ******************************************************************************/
+ * ************************************************************************** */
 
 /**
  * A thunk that takes a type level value. Like Reader.ask this function is
@@ -177,9 +177,9 @@ export function fromIOEither<A, B, C = never>(
   return flow(ma, resolve);
 }
 
-/*******************************************************************************
+/** ****************************************************************************
  * Functions
- ******************************************************************************/
+ * ************************************************************************** */
 
 export function of<A, B = never, C = never>(a: A): Affect<C, B, A> {
   return right(a);
@@ -250,9 +250,9 @@ export function recover<E, A>(
   return (ta) => flow(ta, then(E.fold(flow(fea, E.right), E.right)));
 }
 
-/*******************************************************************************
+/** ****************************************************************************
  * Modules
- ******************************************************************************/
+ * ************************************************************************** */
 
 export const Functor: TC.Functor<URI> = { map };
 
@@ -275,9 +275,9 @@ export const MonadThrow: TC.MonadThrow<URI> = {
   throwError,
 };
 
-/*******************************************************************************
+/** ****************************************************************************
  * Derived Functions
- ******************************************************************************/
+ * ************************************************************************** */
 
 export const sequenceTuple = createSequenceTuple(Apply);
 
