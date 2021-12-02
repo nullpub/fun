@@ -166,9 +166,9 @@ export function askLeft<B, A = never>(): Affect<B, B, A> {
  * ```
  */
 export function asks<C, B = never, A = never>(
-  fca: (c: C) => Promise<A>,
+  fca: (c: C) => A | Promise<A>,
 ): Affect<C, B, A> {
-  return flow(fca, then(eitherRight));
+  return async (c) => eitherRight(await fca(c));
 }
 
 /**
@@ -191,9 +191,9 @@ export function asks<C, B = never, A = never>(
  * ```
  */
 export function asksLeft<C, B = never, A = never>(
-  fce: (c: C) => Promise<B>,
+  fcb: (c: C) => B | Promise<B>,
 ): Affect<C, B, A> {
-  return flow(fce, then(eitherLeft));
+  return async (c) => eitherLeft(await fcb(c));
 }
 
 /**
