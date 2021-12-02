@@ -9,9 +9,30 @@ import * as IO from "../io.ts";
 import * as IOE from "../io_either.ts";
 import { pipe, resolve, then } from "../fns.ts";
 
-Deno.test("Affect make", async () => {
-  const a = await resolve(1);
-  assertEquals(a, 1);
+Deno.test("Affect alt", async () => {
+  const v1 = A.ask<number>();
+  const v2 = A.asks((n: number) => resolve(n + 1));
+  const v3 = A.askLeft<number, number>();
+  const v4 = A.asksLeft<number, number, number>((n: number) => resolve(n + 1));
+
+  const t1 = await pipe(v1, A.alt(v2))(0);
+  const t2 = await pipe(v1, A.alt(v3))(0);
+  const t3 = await pipe(v3, A.alt(v4))(0);
+
+  assertEquals(t1, E.right(0));
+  assertEquals(t2, E.right(0));
+  assertEquals(t3, E.left(1));
+});
+
+Deno.test("Affect widen", async () => {
+  const v1 = pipe(
+    A.ask<number>(),
+    A.alt(pipe(A.askLeft<number>(), A.widen<number>())),
+  );
+
+  const t1 = await v1(0);
+
+  assertEquals(t1, E.right(0));
 });
 
 Deno.test("Affect then", async () => {

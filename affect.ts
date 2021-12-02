@@ -52,6 +52,34 @@ declare module "./kind.ts" {
 }
 
 /**
+ * The Alt implementation for the Affect ADT.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ * import { pipe } from "./fns.ts";
+ *
+ * const computation = pipe(
+ *   A.askLeft<number>(),
+ *   A.alt(pipe(A.asks((n: number) => n + 1))),
+ * );
+ * const result = await computation(1);
+ *
+ * assertEquals(result, E.right(2));
+ * ```
+ */
+export function alt<A, B, C>(
+  second: Affect<C, B, A>,
+): (first: Affect<C, B, A>) => Affect<C, B, A> {
+  return (first) =>
+    async (c: C) => {
+      const result = await first(c);
+      return eitherIsLeft(result) ? await second(c) : result;
+    };
+}
+
+/**
  * The parallel [Apply](./apply.ts) implementation for the Affect ADT.
  *
  * ```ts
@@ -471,7 +499,7 @@ export function left<A = never, B = never, C = never>(
  * import { pipe } from "./fns.ts";
  *
  * const computation = pipe(
- *   A.right<string, string, string>(),
+ *   A.ask<string>("yar"),
  *   A.map(s => s.length),
  * );
  * const result = await computation("hello");
@@ -485,12 +513,46 @@ export function map<A, I>(
   return (ta) => flow(ta, then(eitherMap(fai)));
 }
 
+/**
+ * The Bifunctor implementation of mapLeft for the Affect ADT. This maps over
+ * left values inside affect.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ * import { pipe } from "./fns.ts";
+ *
+ * const computation = pipe(
+ *   A.askLeft<string>(),
+ *   A.mapLeeft(s => s.length),
+ * );
+ * const result = await computation("hello");
+ *
+ * assertEquals(result, E.left(5));
+ * ```
+ */
 export function mapLeft<B, J>(
   fbj: (b: B) => J,
 ): (<R, A>(ta: Affect<R, B, A>) => Affect<R, J, A>) {
   return (ta) => flow(ta, then(eitherMapLeft(fbj)));
 }
 
+/**
+ * The Applicative implementation for the Affect ADT. Constructs an Affect
+ * from a value and wraps it in an inner *Right*.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ *
+ * const computation = A.of<string, string, string>("Hello");
+ * const result = await computation("World");
+ *
+ * assertEquals(result, E.right("Hello"));
+ * ```
+ */
 export function of<A, B = never, C = never>(a: A): Affect<C, B, A> {
   return right(a);
 }
@@ -529,12 +591,50 @@ export function right<A, B = never, C = never>(
   return () => resolve(eitherRight(right));
 }
 
+/**
+ * The MonadThrow implementation for the Affect ADT. Constructs an Affect
+ * from a value and wraps it in an inner *Left*.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ *
+ * const computation = A.throwError<string, string, string>("Hello");
+ * const result = await computation("World");
+ *
+ * assertEquals(result, E.left("Hello"));
+ * ```
+ */
 export function throwError<A = never, B = never, C = never>(
   b: B,
 ): Affect<C, B, A> {
   return left(b);
 }
 
+/**
+ * Takes type level arguments for the three parameters of an Affect and
+ * returns a function that widens the type of any Affect passed to it without
+ * modifying the actual value.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ * import { pipe } from "./fns.ts";
+ *
+ * const computation = pipe(
+ *   A.ask<number, number, number>(),
+ *   A.widen<string, string, string>(),
+ * );
+ *
+ * const r0 = await computation(1);
+ * const r1 = await computation("Hello");
+ *
+ * assertEquals(r0, E.right(1));
+ * assertEquals(r1, E.right("Hello"));
+ * ```
+ */
 export function widen<I, J = never, K = never>(): <A, B, C>(
   ta: Affect<C, B, A>,
 ) => Affect<C | K, B | J, A | I> {
@@ -542,18 +642,44 @@ export function widen<I, J = never, K = never>(): <A, B, C>(
   return identity as any;
 }
 
-export const Functor: T.Functor<URI> = { map };
+/**
+ * The canonical Applicative structure for Affect.
+ */
+export const Alt: T.Alt<URI> = { alt, map };
 
-export const Bifunctor: T.Bifunctor<URI> = { bimap, mapLeft };
-
-export const Apply: T.Apply<URI> = { ap, map };
-
+/**
+ * The canonical Applicative structure for Affect.
+ */
 export const Applicative: T.Applicative<URI> = { of, ap, map };
 
+/**
+ * The canonical Apply structure for Affect.
+ */
+export const Apply: T.Apply<URI> = { ap, map };
+
+/**
+ * The canonical Bifunctor structure for Affect.
+ */
+export const Bifunctor: T.Bifunctor<URI> = { bimap, mapLeft };
+
+/**
+ * The canonical Chain structure for Affect.
+ */
 export const Chain: T.Chain<URI> = { ap, map, chain };
 
+/**
+ * The canonical Functor structure for Affect.
+ */
+export const Functor: T.Functor<URI> = { map };
+
+/**
+ * The canonical Monad structure for Affect.
+ */
 export const Monad: T.Monad<URI> = { of, ap, map, join, chain };
 
+/**
+ * The canonical MonadThrow structure for Affect.
+ */
 export const MonadThrow: T.MonadThrow<URI> = {
   of,
   ap,
@@ -563,8 +689,54 @@ export const MonadThrow: T.MonadThrow<URI> = {
   throwError,
 };
 
+/**
+ * A variadic function that takes any number of Affects (in effect it takes
+ * a tuple of Affects) and returns an Affect which contains a tuple of the
+ * Affect's passed. In effect it has the form of
+ * `Affect<C, B, A>[] => Affect<C, B, A[]>`.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ * import { pipe } from "./fns.ts";
+ *
+ * const computation = A.sequenceTuple(
+ *   A.ask<string>(),
+ *   A.asks((s: string) => s.length),
+ *   pipe(A.ask<string>(), A.map(s => s.toUpperCase())),
+ * );
+ *
+ * const result = await computation("Hello World");
+ *
+ * assertEquals(result, E.right(["Hello World", 11, "HELLO WORLD"]));
+ * ```
+ */
 export const sequenceTuple = createSequenceTuple(Apply);
 
+/**
+ * Takes a record of affects and returns an affect containing a record keyed
+ * the same way as the original record.
+ *
+ * ```ts
+ * import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+ * import * as A from "./affect.ts";
+ * import * as E from "./either.ts";
+ * import { pipe } from "./fns.ts";
+ *
+ * const computation = A.sequenceStruct({
+ *   one: A.ask<number>(),
+ *   two: A.of("Two"),
+ *   three: A.asks((n: number) => n + 1),
+ * });
+ * const result = await computation(0);
+ *
+ * assertEquals(result, E.right({ one: 0, two: "Two", three: 1 }));
+ * ```
+ */
 export const sequenceStruct = createSequenceStruct(Apply);
 
+/**
+ * The standard Do notation helpers for the Affect ADT.
+ */
 export const { Do, bind, bindTo } = createDo(Monad);
