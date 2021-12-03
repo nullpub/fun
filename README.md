@@ -4,9 +4,8 @@ functional is a set of utility modules in the vein of
 [Ramda](https://ramdajs.com/) and [fp-ts](https://gcanti.github.io/fp-ts/). It
 uses a
 [lightweight higher kinded type encoding](https://github.com/nullpub/fun/blob/main/hkt.ts)
-to implement
-[type classes](https://github.com/nullpub/fun/blob/main/type_classes.ts) such as
-Functor, Monad, and Traversable. Originally, it followed the
+to implement algebraic structures (a.k.a mathy design patterns with more rules)
+such as Functor, Monad, and Traversable. Originally, it followed the
 [static-land](https://github.com/fantasyland/static-land/blob/master/docs/spec.md)
 specification for these modules, but has since diverged and settled on a curried
 form of those same module definitions. It contains many common algebraic types
@@ -159,8 +158,10 @@ Contributions are welcome! Currently, the only maintainer for functional is
 change something, open an issue and ask away. The guidelines for contribution
 are:
 
-1. We use
+1. We are kind to all people regardless of disability, skin color, sex, gender,
+interests, or whether we like them or not.
+2. We use
    [conventional commit messages](https://www.conventionalcommits.org/en/v1.0.0/)
-2. We use [semantic versioning](https://semver.org/)
-3. We don't break APIs
-4. We keep test coverage at 100%
+3. We use [semantic versioning](https://semver.org/)
+4. We don't break APIs
+5. We keep test coverage at 100%
