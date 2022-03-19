@@ -1,6 +1,7 @@
 import * as A from "../affect.ts";
 import * as E from "../either.ts";
 import { pipe, wait } from "../fns.ts";
+import { Show } from "../types.ts";
 
 const t1: A.Affect<number, string, number> = async (n) => {
   await wait(250);
@@ -44,3 +45,8 @@ Promise.all([0, 1, 99, 100].map(t3)).then(console.log);
 // { tag: "Right", right: 1 }
 // { tag: "Right", right: 99 }
 // { tag: "Left", left: "Number is greater than 99" }
+
+console.log(v0.toString());
+console.log(v1.toString());
+console.log(v2.toString());
+console.log(v3.toString());
