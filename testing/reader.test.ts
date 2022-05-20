@@ -39,21 +39,21 @@ Deno.test("Reader chain", () => {
   assertEqualsR(chain(R.make(0)), R.make(1));
 });
 
-Deno.test("Reader Do, bind, bindTo", () => {
-  assertEqualsR(
-    pipe(
-      R.Do<number, number, number>(),
-      R.bind("one", () => R.make(1)),
-      R.bind("two", ({ one }) => R.make(one + one)),
-      R.map(({ one, two }) => one + two),
-    ),
-    R.make(3),
-  );
-  assertEqualsR(
-    pipe(
-      R.make(1),
-      R.bindTo("one"),
-    ),
-    R.asks((_: number) => ({ one: 1 })),
-  );
-});
+// Deno.test("Reader Do, bind, bindTo", () => {
+//   assertEqualsR(
+//     pipe(
+//       R.Do<number, number, number>(),
+//       R.bind("one", () => R.make(1)),
+//       R.bind("two", ({ one }) => R.make(one + one)),
+//       R.map(({ one, two }) => one + two),
+//     ),
+//     R.make(3),
+//   );
+//   assertEqualsR(
+//     pipe(
+//       R.make(1),
+//       R.bindTo("one"),
+//     ),
+//     R.asks((_: number) => ({ one: 1 })),
+//   );
+// });

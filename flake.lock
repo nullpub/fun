@@ -1,0 +1,62 @@
+{
+  "nodes": {
+    "dnt": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1649717073,
+        "narHash": "sha256-7VqjdIupUQSWjvC4DxCP/7ZRVHTlVJUY5tYW0ENZPM8=",
+        "owner": "denoland",
+        "repo": "dnt",
+        "rev": "524ab6b81cbda0f76d8b8105a81ef591fd58c289",
+        "type": "github"
+      },
+      "original": {
+        "owner": "denoland",
+        "ref": "0.23.0",
+        "repo": "dnt",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1652776076,
+        "narHash": "sha256-gzTw/v1vj4dOVbpBSJX4J0DwUR6LIyXo7/SuuTJp1kM=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "04c1b180862888302ddfb2e3ad9eaa63afc60cf8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "ref": "master",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1652840887,
+        "narHash": "sha256-gEK4NNa4GwIgTZE63kt/4WTFAWRTJVSa30+h4ZjFh9U=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "52dc75a4fee3fdbcb792cb6fba009876b912bfe0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "dnt": "dnt",
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

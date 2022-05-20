@@ -110,26 +110,21 @@ Deno.test("ReaderEither compose", () => {
   );
 });
 
-Deno.test("ReaderEither widen", () => {
-  assertEqualsRE(pipe(R.right(0), R.widen<number>()), R.right(0));
-  assertEqualsRE(pipe(R.left(0), R.widen<string>()), R.left(0));
-});
-
-Deno.test("ReaderEither Do, bind, bindTo", () => {
-  assertEqualsRE(
-    pipe(
-      R.Do<number, unknown, unknown>(),
-      R.bind("one", () => R.right(1)),
-      R.bind("two", ({ one }) => R.right(one + one)),
-      R.map(({ one, two }) => one + two),
-    ),
-    R.right(3),
-  );
-  assertEqualsRE(
-    pipe(
-      R.right(1),
-      R.bindTo("one"),
-    ),
-    R.asks((_: number) => ({ one: 1 })),
-  );
-});
+// Deno.test("ReaderEither Do, bind, bindTo", () => {
+//   assertEqualsRE(
+//     pipe(
+//       R.Do<number, unknown, unknown>(),
+//       R.bind("one", () => R.right(1)),
+//       R.bind("two", ({ one }) => R.right(one + one)),
+//       R.map(({ one, two }) => one + two),
+//     ),
+//     R.right(3),
+//   );
+//   assertEqualsRE(
+//     pipe(
+//       R.right(1),
+//       R.bindTo("one"),
+//     ),
+//     R.asks((_: number) => ({ one: 1 })),
+//   );
+// });

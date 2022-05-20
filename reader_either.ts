@@ -3,8 +3,7 @@ import type * as T from "./types.ts";
 
 import * as E from "./either.ts";
 import * as R from "./reader.ts";
-import { createDo } from "./derivations.ts";
-import { flow, identity, pipe } from "./fns.ts";
+import { flow, handleThrow, identity, pipe } from "./fns.ts";
 
 export type ReaderEither<S, L, R> = R.Reader<S, E.Either<L, R>>;
 
@@ -41,15 +40,15 @@ export function right<A, B = never, C = unknown>(
   return R.of(E.right(right));
 }
 
-export function tryCatch<A, B, C = unknown>(
-  fa: () => A,
-  onError: (e: unknown) => B,
+export function tryCatch<A, B, C extends unknown[]>(
+  fca: (...c: C) => A,
+  onThrow: (e: unknown, c: C) => B,
 ): ReaderEither<C, B, A> {
-  try {
-    return R.of(E.right(fa()));
-  } catch (e) {
-    return R.of(E.left(onError(e)));
-  }
+  return handleThrow(
+    (c: C) => fca(...c),
+    (a) => E.right(a),
+    (e, c) => E.left(onThrow(e, ...c)),
+  );
 }
 
 export function fromEither<A, B, C = unknown>(
@@ -94,9 +93,9 @@ export function ap<A, I, B, C>(
     (c) => pipe(tfai(c), E.chain((fai) => pipe(ta(c), E.map(fai))));
 }
 
-export function chain<A, B, C, I>(
-  fati: (a: A) => ReaderEither<C, B, I>,
-): (ta: ReaderEither<C, B, A>) => ReaderEither<C, B, I> {
+export function chain<A, C, I, J>(
+  fati: (a: A) => ReaderEither<C, J, I>,
+): <B>(ta: ReaderEither<C, B, A>) => ReaderEither<C, B | J, I> {
   return (ta) =>
     (c) => {
       const e = ta(c);
@@ -130,12 +129,6 @@ export function compose<Y, Z, B>(
   tb: ReaderEither<Y, B, Z>,
 ): <X>(ta: ReaderEither<X, B, Y>) => ReaderEither<X, B, Z> {
   return (ta) => flow(ta, E.chain(tb));
-}
-
-export function widen<F>(): <R, E, A>(
-  ta: ReaderEither<R, E, A>,
-) => ReaderEither<R, E | F, A> {
-  return identity;
 }
 
 export function getRightMonad<B>(
@@ -182,5 +175,3 @@ export const MonadThrow: T.MonadThrow<URI> = {
 };
 
 export const Alt: T.Alt<URI> = { alt, map };
-
-export const { Do, bind, bindTo } = createDo(Monad);

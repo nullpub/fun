@@ -1,7 +1,6 @@
 import type { Kind } from "./kind.ts";
 import type * as T from "./types.ts";
 
-import { createDo } from "./derivations.ts";
 import { constant, flow, identity, pipe } from "./fns.ts";
 
 export type Reader<B, A> = (b: B) => A;
@@ -64,5 +63,3 @@ export const Applicative: T.Applicative<URI> = { of, ap, map };
 export const Chain: T.Chain<URI> = { ap, map, chain };
 
 export const Monad: T.Monad<URI> = { of, ap, map, join, chain };
-
-export const { Do, bind, bindTo } = createDo(Monad);
