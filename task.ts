@@ -1,4 +1,4 @@
-import type { Kind } from "./kind.ts";
+import "./kind.ts";
 import type * as T from "./types.ts";
 
 import { handleThrow, resolve, wait } from "./fns.ts";

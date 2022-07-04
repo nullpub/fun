@@ -104,6 +104,20 @@ export function compose<B, C>(
   return (dab) => flow(dab, E.chain(dbc));
 }
 
+export function json<A>(decoder: Decoder<unknown, A>): Decoder<unknown, A> {
+  return pipe(
+    string,
+    compose((s) => {
+      try {
+        return success(JSON.parse(s));
+      } catch {
+        return failure(s, "json");
+      }
+    }),
+    compose(decoder),
+  );
+}
+
 export function unknown(a: unknown): Result<unknown> {
   return _unknown(a);
 }

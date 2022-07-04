@@ -1,14 +1,12 @@
 {
-  description = "A very basic flake";
+  description = "A functional typescript library for deno.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/22.05";
     flake-utils.url = "github:numtide/flake-utils/master";
-    dnt.url = "github:denoland/dnt/0.23.0";
-    dnt.flake = false;
   };
 
-  outputs = { self, nixpkgs, flake-utils, dnt }:
+  outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
@@ -22,15 +20,19 @@
           builder = "${dash}/bin/dash";
           args = [ "-c" "$mkdir $out; $cp $src/*.ts $out;" ];
         };
+
+        shell = with pkgs; mkShell {
+          buildInputs = [ deno nodejs ];
+
+        };
       in
       {
+        # Packages
         packages.fun = fun;
         packages.default = fun;
 
-        devShell = pkgs.mkShell {
-          dnt = dnt;
-          buildInputs = [ pkgs.deno fun ];
-        };
+        # Shells
+        devShell = shell;
       }
     );
 }

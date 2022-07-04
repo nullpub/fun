@@ -1,17 +1,13 @@
 import * as DNT from "https://deno.land/x/dnt@0.21.2/mod.ts";
 import { parse } from "https://deno.land/x/semver@v1.4.0/mod.ts";
-import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
-import * as A from "../affect.ts";
+import { join } from "https://deno.land/std@0.146.0/path/mod.ts";
+import * as T from "../task_either.ts";
 import * as D from "../decoder.ts";
+import * as A from "../array.ts";
+import * as E from "../either.ts";
 import { flow, pipe } from "../fns.ts";
 
-// Local Constants
-const PACKAGE_NAME = "fun";
-const PACKAGE_DESCRIPTION =
-  "A deno native functional programing utility library.";
-const ENTRYPOINTS = ["./mod.ts"];
-
-// Additional Decoders
+// Environment
 const semver = pipe(
   D.string,
   D.compose((i) => {
@@ -23,80 +19,112 @@ const semver = pipe(
 );
 
 const Env = D.struct({
+  NAME: D.string,
+  DESCRIPTION: D.string,
   VERSION: semver,
   BUILD_DIR: D.string,
+  ENTRYPOINTS: D.json(D.array(D.string)),
+  ADDITIONAL_FILES: D.json(D.array(D.string)),
 });
 
 type Env = D.TypeOf<typeof Env>;
 
 // Errors
-type BuildError = { message: string; context: unknown };
+type BuildError = { message: string; context: Record<string, unknown> };
 
-function buildError(message: string, context?: unknown): BuildError {
-  return { message, context };
-}
+const buildError = (
+  message: string,
+  context: Record<string, unknown> = {},
+): BuildError => ({ message, context });
 
-// Lift external functions into Affect
-const build = A.tryCatch(
-  DNT.build,
-  (err, args) => buildError("Unable to build node package.", { err, args }),
+const printBuildError = ({ message, context }: BuildError) => {
+  let msg = `BUILD ERROR: ${message}\n`;
+  msg += Object
+    .entries(context)
+    .map(([key, value]) => {
+      const val = typeof value === "string"
+        ? value
+        : value instanceof Error
+        ? value
+        : typeof value === "object" && value !== null &&
+            Object.hasOwn(value, "toString") &&
+            typeof value.toString === "function"
+        ? value.toString()
+        : JSON.stringify(value, null, 2);
+      return `Context - ${key}\n${val}`;
+    })
+    .join("\n");
+  return msg;
+};
+
+// Functions
+const createBuildOptions = (
+  { NAME, DESCRIPTION, BUILD_DIR, VERSION, ENTRYPOINTS }: Env,
+): DNT.BuildOptions => ({
+  entryPoints: ENTRYPOINTS.slice(),
+  outDir: BUILD_DIR,
+  typeCheck: false,
+  test: false,
+  shims: {
+    deno: true,
+  },
+  package: {
+    name: NAME,
+    version: VERSION.toString(),
+    description: DESCRIPTION,
+    license: "MIT",
+  },
+});
+
+const getEnv = T.tryCatch(
+  Deno.env.toObject,
+  (err, args) => buildError("Unable to get environment.", { err, args }),
+)();
+
+const parseEnv = flow(
+  Env,
+  D.extract,
+  E.mapLeft((err) => buildError("Unable to parse environment.", { err })),
+  T.fromEither,
 );
 
-const emptyDir = A.tryCatch(
+const emptyDir = T.tryCatch(
   DNT.emptyDir,
   (err, args) => buildError("Unable to empty build directory.", { err, args }),
 );
 
-const copyFile = A.tryCatch(
-  (buildDir: string, filename: string) =>
-    Deno.copyFile(filename, join(buildDir, filename)),
+const build = T.tryCatch(
+  DNT.build,
+  (err, args) => buildError("Unable to build node package.", { err, args }),
+);
+
+const copyFile = T.tryCatch(
+  Deno.copyFile,
   (err, args) => buildError("Unable to copy file.", { err, args }),
 );
 
-// Clear build directory
-const clearBuildDir = pipe(
-  emptyDir,
-  A.map(({ BUILD_DIR }: Env) => [BUILD_DIR]),
+const traverse = A.traverse(T.Applicative);
+
+const copy = ({ BUILD_DIR, ADDITIONAL_FILES }: Env) =>
+  pipe(
+    ADDITIONAL_FILES,
+    traverse((file) => copyFile(file, join(BUILD_DIR, file))),
+  );
+
+const printComplete = (env: Env) =>
+  `BUILD COMPLETE
+${JSON.stringify(env, null, 2)}`;
+
+export const run = pipe(
+  getEnv,
+  T.chain(parseEnv),
+  T.chainFirst((env) => emptyDir(env.BUILD_DIR)),
+  T.chainFirst((env) => build(createBuildOptions(env))),
+  T.chainFirst(copy),
+  T.fold(
+    flow(printBuildError, console.error),
+    flow(printComplete, console.log),
+  ),
 );
 
-// Build node package
-const buildNodePackage = pipe(
-  build,
-  A.mapArgs(({ BUILD_DIR, VERSION }: Env) => [{
-    entryPoints: ENTRYPOINTS,
-    outDir: BUILD_DIR,
-    typeCheck: true,
-    test: true,
-    shims: {
-      deno: true,
-    },
-    package: {
-      name: PACKAGE_NAME,
-      version: VERSION.toString(),
-      description: PACKAGE_DESCRIPTION,
-      license: "MIT",
-      repository: {
-        type: "git",
-        url: "git+https://github.com/nullpub/fun.git",
-      },
-      bugs: {
-        url: "https://github.com/nullpub/fun/issues",
-      },
-    },
-  }]),
-);
-
-// Copy additional files
-const copyAdditionalFiles = A.chain(({ BUILD_DIR }: Env) =>
-  A.sequenceTuple(
-    copyFile(BUILD_DIR, "LICENSE"),
-    copyFile(BUILD_DIR, "README.md"),
-  )
-);
-
-// Execute
-const execute = flow(
-  Env,
-  A.fromEither,
-  A.mapLeft((err) => buildError("Unable to decode environmern", { err })),
-);
+await run();

@@ -1,5 +1,5 @@
 import * as T from "./types.ts";
-import type { Kinds } from "./kind.ts";
+import "./kind.ts";
 import type { Either } from "./either.ts";
 import type { Option } from "./option.ts";
 import type { Task } from "./task.ts";
@@ -21,10 +21,6 @@ import { isNone } from "./option.ts";
 import { flow, identity, pipe, resolve, then } from "./fns.ts";
 import { createSequenceStruct, createSequenceTuple } from "./apply.ts";
 
-// Affect args must type to a tuple, but if they don't then we must
-// fail them at the type level.
-type ToArgs<C> = C extends readonly [...infer AS] ? readonly [...AS] : [never];
-
 /**
  * The Affect type can best be thought of as an asynchronous function that
  * returns an `Either`. ie. `async (...c: ToArgs<C>) => Promise<Either<B, A>>`. This
@@ -43,7 +39,9 @@ type ToArgs<C> = C extends readonly [...infer AS] ? readonly [...AS] : [never];
  * `RTE = (c: C) => () => Promise<Either<B,A>>`
  * `Aff = (c: C) => Promise<Either<B,A>>`
  */
-export type Affect<C, B, A> = (...c: ToArgs<C>) => Promise<Either<B, A>>;
+export type Affect<C extends unknown[], B, A> = (
+  ...c: C
+) => Promise<Either<B, A>>;
 
 /**
  * URI constant for the Affect ADT
@@ -65,7 +63,7 @@ declare module "./kind.ts" {
   }
 }
 
-export function alt<A, B, C>(
+export function alt<A, B, C extends unknown[]>(
   tb: Affect<C, B, A>,
 ): (ta: Affect<C, B, A>) => Affect<C, B, A> {
   return (ta) =>
@@ -94,7 +92,7 @@ export function alt<A, B, C>(
  * assertEquals(result, E.right(2));
  * ```
  */
-export function ap<A, I, B, C>(
+export function ap<A, I, B, C extends unknown[]>(
   tfai: Affect<C, B, (a: A) => I>,
 ): (ta: Affect<C, B, A>) => Affect<C, B, I> {
   return (ta) =>
@@ -104,7 +102,7 @@ export function ap<A, I, B, C>(
       );
 }
 
-export function apSeq<A, I, B, C>(
+export function apSeq<A, I, B, C extends unknown[]>(
   tfai: Affect<C, B, (a: A) => I>,
 ): (ta: Affect<C, B, A>) => Affect<C, B, I> {
   return (ta) =>
@@ -144,7 +142,7 @@ export function askLeft<B, A = never>(): Affect<[B], B, A> {
 export function bimap<A, B, I, J>(
   fbj: (b: B) => J,
   fai: (a: A) => I,
-): <C>(ta: Affect<C, B, A>) => Affect<C, J, I> {
+): <C extends unknown[]>(ta: Affect<C, B, A>) => Affect<C, J, I> {
   return (ta) => flow(ta, then(eitherBimap(fbj, fai)));
 }
 
@@ -169,7 +167,7 @@ export function bimap<A, B, I, J>(
  * assertEquals(rb, E.left("Number too small"));
  * ```
  */
-export function chain<A, I, J, C>(
+export function chain<A, I, J, C extends unknown[]>(
   fati: (a: A) => Affect<C, J, I>,
 ): <B>(ta: Affect<C, B, A>) => Affect<C, B | J, I> {
   return (ta) =>
@@ -196,7 +194,7 @@ export function chain<A, I, J, C>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function fromEither<A, B, C = never>(
+export function fromEither<A, B, C extends unknown[] = never>(
   ma: Either<B, A>,
 ): Affect<C, B, A> {
   return () => resolve(ma);
@@ -220,7 +218,7 @@ export function fromEither<A, B, C = never>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function fromIO<A, B = never, C = never>(
+export function fromIO<A, B = never, C extends unknown[] = never>(
   ma: IO<A>,
 ): Affect<C, B, A> {
   return flow(ma, eitherRight, resolve);
@@ -244,7 +242,7 @@ export function fromIO<A, B = never, C = never>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function fromIOEither<A, B, C = never>(
+export function fromIOEither<A, B, C extends unknown[] = never>(
   ma: IOEither<B, A>,
 ): Affect<C, B, A> {
   return flow(ma, resolve);
@@ -277,13 +275,13 @@ export function fromOption<B>(
         : resolve(eitherRight(ta.value));
 }
 
-export function fromPromise<A, B = never, C = never>(
+export function fromPromise<A, B = never, C extends unknown[] = never>(
   ta: Promise<A>,
 ): Affect<C, B, A> {
   return () => ta.then(eitherRight);
 }
 
-export function fromThrowablePromise<A, B = never, C = never>(
+export function fromThrowablePromise<A, B = never, C extends unknown[] = never>(
   ta: Promise<A>,
   onThrow: (e: unknown) => B,
 ): Affect<C, B, A> {
@@ -308,7 +306,7 @@ export function fromThrowablePromise<A, B = never, C = never>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function fromTask<A, B = never, C = never>(
+export function fromTask<A, B = never, C extends unknown[] = never>(
   ma: Task<A>,
 ): Affect<C, B, A> {
   return flow(ma, then(eitherRight));
@@ -332,7 +330,7 @@ export function fromTask<A, B = never, C = never>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function fromTaskEither<A, B, C = never>(
+export function fromTaskEither<A, B, C extends unknown[] = never>(
   ma: TaskEither<B, A>,
 ): Affect<C, B, A> {
   return ma;
@@ -357,7 +355,7 @@ export function fromTaskEither<A, B, C = never>(
  * assertEquals(result, E.right(2));
  * ```
  */
-export function join<A, B, C>(
+export function join<A, B, C extends unknown[]>(
   ta: Affect<C, B, Affect<C, B, A>>,
 ): Affect<C, B, A> {
   return pipe(ta, chain(identity));
@@ -377,7 +375,7 @@ export function join<A, B, C>(
  * assertEquals(result, E.left(1));
  * ```
  */
-export function left<A = never, B = never, C = never>(
+export function left<A = never, B = never, C extends unknown[] = never>(
   left: B,
 ): Affect<C, B, A> {
   return () => resolve(eitherLeft(left));
@@ -403,17 +401,23 @@ export function left<A = never, B = never, C = never>(
  */
 export function map<A, I>(
   fai: (a: A) => I,
-): <B, C>(ta: Affect<C, B, A>) => Affect<C, B, I> {
+): <B, C extends unknown[]>(ta: Affect<C, B, A>) => Affect<C, B, I> {
   return (ta) => flow(ta, then(eitherMap(fai)));
 }
 
 export function mapLeft<B, J>(
   fbj: (b: B) => J,
-): <A, C>(ta: Affect<C, B, A>) => Affect<C, J, A> {
+): <A, C extends unknown[]>(ta: Affect<C, B, A>) => Affect<C, J, A> {
   return (ta) => flow(ta, then(eitherMapLeft(fbj)));
 }
 
-export function of<A, B = never, C = never>(
+export function mapArgs<C extends unknown[], K extends unknown[]>(
+  fck: (...c: C) => K,
+): <A, B>(ta: Affect<K, B, A>) => Affect<C, B, A> {
+  return (ta) => (...c) => ta(...fck(...c));
+}
+
+export function of<A, B = never, C extends unknown[] = never>(
   a: A,
 ): Affect<C, B, A> {
   return right(a);
@@ -421,14 +425,14 @@ export function of<A, B = never, C = never>(
 
 export function recover<E, A>(
   fea: (e: E) => A,
-): <C>(ta: Affect<C, E, A>) => Affect<C, E, A> {
+): <C extends unknown[]>(ta: Affect<C, E, A>) => Affect<C, E, A> {
   return (ta) =>
     flow(ta, then(eitherFold(flow(fea, eitherRight), eitherRight)));
 }
 
-export function tryCatch<C, B, A>(
-  fca: (...c: ToArgs<C>) => A | PromiseLike<A>,
-  onThrow: (e: unknown, c: ToArgs<C>) => B,
+export function tryCatch<A, B, C extends unknown[]>(
+  fca: (...c: C) => A,
+  onThrow: (e: unknown, c: C) => B,
 ): Affect<C, B, A> {
   return async (...c) => {
     try {
@@ -439,10 +443,10 @@ export function tryCatch<C, B, A>(
   };
 }
 
-export function fold<C, B, A, O>(
+export function fold<A, B, C extends unknown[], O>(
   onLeft: (left: B) => O,
   onRight: (right: A) => O,
-): (ta: Affect<C, B, A>) => (...c: ToArgs<C>) => Promise<O> {
+): (ta: Affect<C, B, A>) => (...c: C) => Promise<O> {
   return (ta) => (...c) => ta(...c).then(eitherFold(onLeft, onRight));
 }
 
@@ -460,31 +464,44 @@ export function fold<C, B, A, O>(
  * assertEquals(result, E.right(1));
  * ```
  */
-export function right<A, B = never, C = never>(
+export function right<A, B = never, C extends unknown[] = never>(
   right: A,
 ): Affect<C, B, A> {
   return () => resolve(eitherRight(right));
 }
 
-export function throwError<A = never, B = never, C = never>(
+export function throwError<A = never, B = never, C extends unknown[] = never>(
   b: B,
 ): Affect<C, B, A> {
   return left(b);
 }
 
-export const Functor: T.Functor<URI> = { map };
+export const Functor: T.Functor<URI, [unknown, unknown[]]> = { map };
 
-export const Bifunctor: T.Bifunctor<URI> = { bimap, mapLeft };
+export const Bifunctor: T.Bifunctor<URI, [unknown, unknown[]]> = {
+  bimap,
+  mapLeft,
+};
 
-export const Apply: T.Apply<URI> = { ap, map };
+export const Apply: T.Apply<URI, [unknown, unknown[]]> = { ap, map };
 
-export const Applicative: T.Applicative<URI> = { of, ap, map };
+export const Applicative: T.Applicative<URI, [unknown, unknown[]]> = {
+  of,
+  ap,
+  map,
+};
 
-export const Chain: T.Chain<URI> = { ap, map, chain };
+export const Chain: T.Chain<URI, [unknown, unknown[]]> = { ap, map, chain };
 
-export const Monad: T.Monad<URI> = { of, ap, map, join, chain };
+export const Monad: T.Monad<URI, [unknown, unknown[]]> = {
+  of,
+  ap,
+  map,
+  join,
+  chain,
+};
 
-export const MonadThrow: T.MonadThrow<URI> = {
+export const MonadThrow: T.MonadThrow<URI, [unknown, unknown[]]> = {
   of,
   ap,
   map,
@@ -493,17 +510,31 @@ export const MonadThrow: T.MonadThrow<URI> = {
   throwError,
 };
 
-export const Alt: T.Alt<URI> = { alt, map };
+export const Alt: T.Alt<URI, [unknown, unknown[]]> = { alt, map };
 
-export const ApplySeq: T.Apply<URI> = { ap: apSeq, map };
+export const ApplySeq: T.Apply<URI, [unknown, unknown[]]> = { ap: apSeq, map };
 
-export const ApplicativeSeq: T.Applicative<URI> = { of, ap: apSeq, map };
+export const ApplicativeSeq: T.Applicative<URI, [unknown, unknown[]]> = {
+  of,
+  ap: apSeq,
+  map,
+};
 
-export const ChainSeq: T.Chain<URI> = { ap: apSeq, map, chain };
+export const ChainSeq: T.Chain<URI, [unknown, unknown[]]> = {
+  ap: apSeq,
+  map,
+  chain,
+};
 
-export const MonadSeq: T.Monad<URI> = { of, ap: apSeq, map, join, chain };
+export const MonadSeq: T.Monad<URI, [unknown, unknown[]]> = {
+  of,
+  ap: apSeq,
+  map,
+  join,
+  chain,
+};
 
-export const MonadThrowSeq: T.MonadThrow<URI> = {
+export const MonadThrowSeq: T.MonadThrow<URI, [unknown, unknown[]]> = {
   of,
   ap: apSeq,
   map,

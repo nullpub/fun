@@ -5,3 +5,6 @@ draft
 coverage
 out
 result
+build
+.envrc
+.direnv

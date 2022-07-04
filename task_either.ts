@@ -1,4 +1,4 @@
-import type { Kind } from "./kind.ts";
+import "./kind.ts";
 import type * as T from "./types.ts";
 import type { Task } from "./task.ts";
 import type { Either } from "./either.ts";
@@ -223,6 +223,21 @@ export function chain<A, I, J>(
     async () => {
       const ea = await ta();
       return eitherIsLeft(ea) ? ea : fati(ea.right)();
+    };
+}
+
+export function chainFirst<A, I, J>(
+  fati: (a: A) => TaskEither<J, I>,
+): <B>(ta: TaskEither<B, A>) => TaskEither<B | J, A> {
+  return (ta) =>
+    async () => {
+      const ea = await ta();
+      if (eitherIsLeft(ea)) {
+        return ea;
+      } else {
+        const ei = await fati(ea.right)();
+        return eitherIsLeft(ei) ? ei : ea;
+      }
     };
 }
 
