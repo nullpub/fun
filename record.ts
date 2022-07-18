@@ -22,15 +22,24 @@ const compareStrings = toCompare(ordString);
 
 const sortStrings = (keys: string[]): string[] => keys.sort(compareStrings);
 
+/**
+ * Creates a new object with the same keys of `ta`. Values are transformed
+ * using `fai`.
+ *
+ * ```ts
+ * import { map } from "./record.ts"
+ * map((n: number) => n + 1)({ a: 1 }); // { a: 2 }
+ * ```
+ */
 export function map<A, I>(
   fai: (a: A, i: string) => I,
-): <KS extends string>(ta: { [K in KS]: A }) => { [K in KS]: I } {
+): <T>(ta: { [K in keyof T]: A }) => { [K in keyof T]: I } {
   return (ta) => {
-    const out: Record<string, I> = {};
+    const out = {} as { [K in keyof typeof ta]: I };
     for (const [key, entry] of Object.entries(ta) as [keyof typeof ta, A][]) {
-      out[key] = fai(entry, key);
+      out[key] = fai(entry, key as string);
     }
-    return out as { [K in keyof typeof ta]: I };
+    return out;
   };
 }
 
@@ -93,15 +102,31 @@ export function deleteAt<K extends string>(
   };
 }
 
-export function omit<A, P extends keyof A>(
-  props: [P, ...Array<P>],
-  a: A,
-): Omit<A, P> {
-  const out: A = Object.assign({}, a);
-  for (const k of props) {
-    delete out[k];
-  }
-  return out as { [K in keyof A]: K extends P ? never : A[K] };
+/**
+ * Omit specified `keys` from a `record`. Value-space implementation of the
+ * [`Omit`](https://www.typescriptlang.org/docs/handbook/utility-types.html#omittype-keys)
+ * utility type.
+ *
+ * @example
+ * ```ts
+ * import { omit } from "./record.ts";
+ * omit(["a", "c"])({ a: 1, b: 2 }) // { b: 2 }
+ * ```
+ *
+ * @category combinators
+ */
+// deno-lint-ignore no-explicit-any
+export function omit<T, K extends keyof any>(
+  keys: readonly K[],
+): (record: T) => Omit<T, K> {
+  return (record: T) => {
+    const output = Object.assign({}, record);
+    for (const key of keys) {
+      // deno-lint-ignore no-explicit-any
+      delete (output as any)[key];
+    }
+    return output;
+  };
 }
 
 /**
@@ -138,9 +163,9 @@ export function keys<P extends Record<string, unknown>>(p: P): (keyof P)[] {
 
 export function zipFirst<A, I>(
   fabi: Fn<[string, A, unknown], I>,
-): (tb: Record<string, unknown>) => <KS extends string>(
-  ta: { [K in KS]: A },
-) => { [K in KS]: I } {
+): (tb: Record<string, unknown>) => <T>(
+  ta: { [K in keyof T]: A },
+) => { [K in keyof T]: I } {
   return (tb) => map((a: A, key) => fabi(key, a, tb[key]));
 }
 

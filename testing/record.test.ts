@@ -6,11 +6,6 @@ import { pipe } from "../fns.ts";
 
 import * as AS from "./assert.ts";
 
-Deno.test("Record map", () => {
-  assertEquals(pipe({ a: 1, b: 2 }, R.map(AS.add)), { a: 2, b: 3 });
-  assertEquals(pipe({}, R.map(AS.add)), {});
-});
-
 Deno.test("Record reduce", () => {
   assertEquals(
     pipe({ a: 1, b: 2 }, R.reduce((a: number, b: number) => a + b, 0)),
@@ -64,9 +59,21 @@ Deno.test("Record reduce", () => {
 });
 
 Deno.test("Record map", () => {
+  assertEquals(pipe({ a: 1, b: 2 }, R.map(AS.add)), { a: 2, b: 3 });
+  assertEquals(pipe({}, R.map(AS.add)), {});
+
+  assertEquals(
+    pipe({ a: [1, 2, 3] }, R.map((numbers) => numbers.slice())),
+    { a: [1, 2, 3] },
+  );
+
   const map = R.map(AS.add);
   assertEquals(map({}), {});
   assertEquals(map({ a: 1, b: 2 }), { a: 2, b: 3 });
+
+  type Foo = { bar: number; baz?: number };
+  const foo: Foo = { bar: 1 };
+  assertEquals<Foo>(map(foo), { bar: 2 });
 });
 
 Deno.test("Record indexedTraverse", () => {
@@ -112,7 +119,13 @@ Deno.test("Record deleteAt", () => {
 });
 
 Deno.test("Record omit", () => {
-  assertEquals(R.omit(["a", "b"], { a: 1, b: 2, c: 3 }), { c: 3 });
+  assertEquals(R.omit(["a", "c"] as const)({ a: 1, b: 2 }), { b: 2 });
+  const foo = Symbol();
+  const bar = Symbol();
+  assertEquals(
+    R.omit([foo] as const)({ [foo]: "foo", [bar]: "bar" }),
+    { [bar]: "bar" },
+  );
 });
 
 Deno.test("Record pick", () => {
